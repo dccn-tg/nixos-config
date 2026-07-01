@@ -1,6 +1,6 @@
 {
   imports = [
-    ../hardware/generated/vm.nix
+    ../hardware/generated/vm001.nix
 
     ../modules/boot.nix
     ../modules/common.nix
