@@ -100,10 +100,10 @@ to skip setting root password for unattended installation.
 
 ### 10. Set specific user password before reboot
 
-For example, to set the password for user `honlee`:
+For example, to set the password for user `nixadmin`:
 
 ```bash
-nixos-enter --root /mnt -c 'passwd honlee'
+nixos-enter --root /mnt -c 'passwd nixadmin'
 ```
 
 ### 11. Reboot

@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  users.users.honlee = {
+  users.users.nixadmin = {
 
     isNormalUser = true;
 
