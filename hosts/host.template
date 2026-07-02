@@ -10,6 +10,7 @@
     ../modules/networking.nix
     ../modules/power.nix
     ../modules/thermal.nix
+    ../modules/docker.nix
   ];
 
   networking.hostName = "@@HOSTNAME@@";
