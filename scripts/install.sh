@@ -160,12 +160,6 @@ ok "Filesystems mounted at /mnt"
 # 8. Generate hardware configuration
 # ---------------------------------------------------------------------------
 
-info "Checking host specific configuration"
-if [ ! -f "$REPO_DIR/hosts/${HOSTNAME}.nix" ]; then
-    sed s/@@HOSTNAME@@/${HOSTNAME}/g "$REPO_DIR/hosts/host.template" > "$REPO_DIR/hosts/${HOSTNAME}.nix"
-    git add "$REPO_DIR/hosts/${HOSTNAME}.nix" 
-fi
-
 info "Generating hardware configuration"
 nixos-generate-config --root /mnt
 ok "Hardware configuration written to /mnt/etc/nixos/"
@@ -183,6 +177,12 @@ fi
 # ---------------------------------------------------------------------------
 # 10. Copy generated hardware configuration into the repo
 # ---------------------------------------------------------------------------
+
+info "Checking host specific configuration"
+if [ ! -f "$REPO_DIR/hosts/${HOSTNAME}.nix" ]; then
+    sed s/@@HOSTNAME@@/${HOSTNAME}/g "$REPO_DIR/hosts/host.template" > "$REPO_DIR/hosts/${HOSTNAME}.nix"
+    git add "$REPO_DIR/hosts/${HOSTNAME}.nix" 
+fi
 
 info "Copying hardware configuration to $REPO_DIR/hardware/generated/${HOSTNAME}.nix"
 cp /mnt/etc/nixos/hardware-configuration.nix \
