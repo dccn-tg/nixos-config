@@ -4,6 +4,7 @@ NixOS configuration managed with Flakes.
 
 ## Installing NixOS with Flake
 
+1. get into system firmware and set secure boot to the Setup Mode
 1. boot with the NixOS installer
 2. clone this repository
 3. run the [`scripts/install.sh`](scripts/install.sh) script which does the steps described below.
@@ -130,21 +131,3 @@ To upgrade to the latest packages pinned in the flake:
 nix flake update /etc/nixos/nixos-config
 sudo nixos-rebuild switch --flake /etc/nixos/nixos-config#vm001
 ```
-
----
-
-## Adding a new host
-
-1. Create a host file under `hosts/<hostname>.nix`.
-2. Add the hardware configuration under `hardware/generated/<hostname>.nix`.
-3. Register the host in `flake.nix`:
-
-```nix
-nixosConfigurations = {
-  vm001       = mkHost ./hosts/vm001.nix;
-  dccnlpt001  = mkHost ./hosts/dccnlpt001.nix;
-  newhostname = mkHost ./hosts/newhostname.nix;  # add this line
-};
-```
-
-4. Follow the installation steps above, substituting `vm001` with the new hostname.
