@@ -15,19 +15,27 @@
       system = "x86_64-linux";
 
       mkHost = hostname:
-        nixpkgs.lib.nixosSystem {
-          inherit system;
 
-          modules = [
-            disko.nixosModules.disko
+        let
+          host = import ./hosts/${hostname}/args.nix;
+        in
+          nixpkgs.lib.nixosSystem {
+            inherit system;
 
-            ./modules/options.nix
-            ./modules/disko.nix
-            ./modules/system/common.nix
-            ./hosts/${hostname}
+            specialArgs = {
+              inherit host;
+            };
 
-          ];
-        };
+            modules = [
+              disko.nixosModules.disko
+
+              ./modules/options.nix
+              ./modules/disko.nix
+              ./modules/system/common.nix
+              ./hosts/${hostname}/hardware.nix
+              ./profiles/${host.profile}.nix
+            ];
+          };
     in
     {
       nixosConfigurations = {
