@@ -13,11 +13,12 @@ die()   { printf '\n\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 swapGB=$(awk '/MemTotal/ {printf "%d", $2*1.2/1024/1024}' /proc/meminfo)
 
 # ---------------------------------------------------------------------------
-# 1. Input validation
+# Input validation
 # ---------------------------------------------------------------------------
 
 [[ $EUID -eq 0 ]] || die "This script must be run as root (use sudo)."
 
+# FIXME: use getopts to parse arguments & usage message
 HOSTNAME="${1:-}"
 PROFILE="${2:-}"
 DISK="${3:-}"
@@ -33,7 +34,7 @@ REPO_URL="https://github.com/dccn-tg/nixos-config"
 REPO_DIR=$(cd "$SCRIPT_DIR/.." && git rev-parse --show-toplevel || "")
 
 # ---------------------------------------------------------------------------
-# 2. Collect secrets up front (nothing is written to disk or echoed)
+# Collect secrets up front (nothing is written to disk or echoed)
 # ---------------------------------------------------------------------------
 
 info "Collecting secrets"
@@ -44,7 +45,7 @@ read -rsp "  Confirm password for user 'nixadmin': " USER_PASS2; echo
 [[ ${#USER_PASS} -ge 6 ]] || die "User password must be at least 6 characters."
 
 # ---------------------------------------------------------------------------
-# 3. Confirmation prompt
+# Confirmation prompt
 # ---------------------------------------------------------------------------
 
 printf '\n'
@@ -57,7 +58,7 @@ read -rp "Type YES in uppercase to continue: " CONFIRM
 [[ "$CONFIRM" == "YES" ]] || { echo "Aborted."; exit 0; }
 
 # ---------------------------------------------------------------------------
-# 8. Generate hardware configuration
+# Generate hardware configuration
 # ---------------------------------------------------------------------------
 
 info "Generating hardware configuration"
@@ -65,7 +66,7 @@ nixos-generate-config --root /mnt
 ok "Hardware configuration written to /mnt/etc/nixos/"
 
 # ---------------------------------------------------------------------------
-# 9. Clone this repository
+# Clone this repository
 # ---------------------------------------------------------------------------
 if [ "$REPO_DIR" == "" ]; then
     REPO_DIR="/mnt/etc/nixos/nixos-config"
@@ -75,7 +76,7 @@ if [ "$REPO_DIR" == "" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 10. Copy generated hardware configuration into the repo
+# Copy generated hardware configuration into the repo
 # ---------------------------------------------------------------------------
 info "Checking host specific configuration"
 REPO_DIR_HOST="$REPO_DIR/hosts/${HOSTNAME}"
@@ -109,7 +110,7 @@ git add "$REPO_DIR_HOST/install-args.nix"
 ok "Installation arguments written"
 
 # ---------------------------------------------------------------------------
-# 11. Install NixOS
+# Install NixOS
 # ---------------------------------------------------------------------------
 
 info "Creating disk partitions"
@@ -120,7 +121,7 @@ nixos-install --no-root-passwd --flake "${REPO_DIR}#${HOSTNAME}"
 ok "NixOS installation complete"
 
 # ---------------------------------------------------------------------------
-# 12. Set nixadmin password
+# Set nixadmin password
 # ---------------------------------------------------------------------------
 
 info "Setting password for user 'nixadmin'"
@@ -134,7 +135,13 @@ USER_PASS2="$USER_PASS"
 ok "Password set for nixadmin"
 
 # ---------------------------------------------------------------------------
-# 13. Done
+# Copy repository to /mnt/etc/nixos/nixos-config
+# ---------------------------------------------------------------------------
+
+cp -R "$REPO_DIR" /mnt/etc/nixos/nixos-config
+
+# ---------------------------------------------------------------------------
+# Done
 # ---------------------------------------------------------------------------
 
 printf '\n'
