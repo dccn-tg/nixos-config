@@ -17,7 +17,7 @@
       mkHost = hostname:
 
         let
-          host = import ./hosts/${hostname}/args.nix;
+          host = import ./hosts/${hostname}/install-args.nix;
         in
           nixpkgs.lib.nixosSystem {
             inherit system;

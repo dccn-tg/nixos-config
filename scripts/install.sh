@@ -19,10 +19,12 @@ swapGB=$(awk '/MemTotal/ {printf "%d", $2*1.2/1024/1024}' /proc/meminfo)
 [[ $EUID -eq 0 ]] || die "This script must be run as root (use sudo)."
 
 HOSTNAME="${1:-}"
-DISK="${2:-}"
+PROFILE="${2:-}"
+DISK="${3:-}"
 
-[[ -n "$HOSTNAME" ]] || die "Usage: $0 <hostname> <disk-device>"
-[[ -n "$DISK"     ]] || die "Usage: $0 <hostname> <disk-device>"
+[[ -n "$HOSTNAME" ]] || die "Usage: $0 <hostname> <profile> <disk-device>"
+[[ -n "$PROFILE"  ]] || die "Usage: $0 <hostname> <profile> <disk-device>"
+[[ -n "$DISK"     ]] || die "Usage: $0 <hostname> <profile> <disk-device>"
 [[ -b "$DISK"     ]] || die "Disk device '$DISK' not found or is not a block device."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -85,6 +87,26 @@ info "Copying hardware configuration to $REPO_DIR_HOST/hardware.nix"
 cp /mnt/etc/nixos/hardware-configuration.nix "$REPO_DIR_HOST/hardware.nix"
 git add "$REPO_DIR_HOST/hardware.nix"
 ok "Hardware config copied"
+
+info "Creating host-specfic installation arguments in $REPO_DIR_HOST/install-args.nix"
+cat > "$REPO_DIR_HOST/install-args.nix" <<EOF
+{
+  # Hostname of the machine
+  name = "${HOSTNAME}";
+  # NixOS configuration profile to use for installation
+  profile = "${PROFILE}";
+  # Disk device to use for the OS filesystem
+  diskDevice = "${DISK}";
+  # Size of the root partition
+  # FIXME: should be determined dynamically based on disk size and swap size
+  rootSize = "10G";
+  # Size of the swap partition
+  swapSize = "${swapGB}G";
+}
+EOF
+
+git add "$REPO_DIR_HOST/install-args.nix"
+ok "Installation arguments written"
 
 # ---------------------------------------------------------------------------
 # 11. Install NixOS
