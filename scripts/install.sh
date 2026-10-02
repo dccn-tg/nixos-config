@@ -49,7 +49,7 @@ printf '\n'
 printf '\033[1;33mWARNING:\033[0m All data on %s will be permanently destroyed.\n' "$DISK"
 printf '         Hostname : %s\n' "$HOSTNAME"
 printf '         Disk     : %s\n' "$DISK"
-printf '         Swap     : %s  (%d GB)\n' "$PART_SWAP" "$swapGB"
+printf '         Swap     : %d GB\n' "$swapGB"
 printf '\n'
 read -rp "Type YES in uppercase to continue: " CONFIRM
 [[ "$CONFIRM" == "YES" ]] || { echo "Aborted."; exit 0; }
