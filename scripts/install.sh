@@ -76,14 +76,14 @@ fi
 # 10. Copy generated hardware configuration into the repo
 # ---------------------------------------------------------------------------
 info "Checking host specific configuration"
-if [ ! -d "$REPO_DIR/hosts/${HOSTNAME}" ]; then
-    mkdir -p "$REPO_DIR/hosts/${HOSTNAME}"
+REPO_DIR_HOST="$REPO_DIR/hosts/${HOSTNAME}"
+if [ ! -d "$REPO_DIR_HOST" ]; then
+    mkdir -p "$REPO_DIR_HOST"
 fi
 
-info "Copying hardware configuration to $REPO_DIR/hosts/${HOSTNAME}/hardware.nix"
-cp /mnt/etc/nixos/hardware-configuration.nix \
-   "$REPO_DIR/host/${HOSTNAME}/hardware.nix"
-git add "$REPO_DIR/host/${HOSTNAME}/hardware.nix"
+info "Copying hardware configuration to $REPO_DIR_HOST/hardware.nix"
+cp /mnt/etc/nixos/hardware-configuration.nix "$REPO_DIR_HOST/hardware.nix"
+git add "$REPO_DIR_HOST/hardware.nix"
 ok "Hardware config copied"
 
 # ---------------------------------------------------------------------------
