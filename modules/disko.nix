@@ -57,6 +57,7 @@ in
             format = "xfs";
             mountpoint = "/";
             mountOptions = [ "noatime" ];
+            extraArgs = [ "-L" "nixos" ];
           };
         };
 
@@ -76,6 +77,7 @@ in
             format = "xfs";
             mountpoint = "/home";
             mountOptions = [ "noatime" ];
+            extraArgs = [ "-L" "home" ];
           };
         };
       };
