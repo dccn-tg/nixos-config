@@ -1,39 +1,37 @@
 {
-  description = "Hong's NixOS configuration";
+  description = "My NixOS systems";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, ... }:
+  outputs = { self, nixpkgs, disko, ... }:
+    let
+      system = "x86_64-linux";
 
-  let
-    system = "x86_64-linux";
+      mkHost = hostname:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
 
-    mkHost = hostFile:
-      nixpkgs.lib.nixosSystem {
-        inherit system;
+          modules = [
+            disko.nixosModules.disko
 
-        modules = [
-          hostFile
-        ];
+            ./modules/options.nix
+            ./modules/disko.nix
+            ./modules/system/common.nix
+            ./hosts/${hostname}
+
+          ];
+        };
+    in
+    {
+      nixosConfigurations = {
+        vm001 = mkHost "vm001";
       };
-
-    hostFiles = builtins.readDir ./hosts;
-
-    hostNames = builtins.attrNames (
-      nixpkgs.lib.filterAttrs
-        (name: type: type == "regular" && builtins.match ".*\\.nix" name != null)
-        hostFiles
-    );
-
-  in {
-    nixosConfigurations =
-      builtins.listToAttrs (
-        map (file: {
-          name = builtins.replaceStrings [ ".nix" ] [ "" ] file;
-          value = mkHost (./hosts + "/${file}");
-        }) hostNames
-      );
-  };
+    };
 }
