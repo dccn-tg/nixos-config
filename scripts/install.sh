@@ -91,8 +91,7 @@ ok "Hardware config copied"
 # ---------------------------------------------------------------------------
 
 info "Creating disk partitions"
-nix-shell -p disko
-disko --mode disko --flake "${REPO_DIR}#${HOSTNAME}"
+nix-shell -p disko --run "disko --mode disko --flake \"${REPO_DIR}#${HOSTNAME}\""
 
 info "Running nixos-install (this may take a while)"
 nixos-install --no-root-passwd --flake "${REPO_DIR}#${HOSTNAME}"
