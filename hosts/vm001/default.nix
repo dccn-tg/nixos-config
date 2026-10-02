@@ -3,7 +3,7 @@
 {
   host = {
     name = "vm001";
-    type = "vm";
+    profile = "vm";
 
     diskDevice = "/dev/vda";
     rootSize = "10G";
