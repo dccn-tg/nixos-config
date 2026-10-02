@@ -3,7 +3,7 @@
     imports = [
         ../modules/hardware/firmware.nix
         ../modules/hardware/bluetooth.nix
-        ../modules/hardware/nvidia-gpu.nix
+        ../modules/hardware/graphics.nix
         ../modules/hardware/virtulization.nix
         ../modules/system/boot.nix
         ../modules/system/networking.nix

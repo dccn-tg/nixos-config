@@ -1,6 +1,9 @@
 { lib, ... }:
 
 {
+
+  options.graphics.nvidia_gpu.enable = lib.mkEnableOption "NVIDIA GPU support";
+
   options.host = {
     name = lib.mkOption {
       description = "The name of the host.";

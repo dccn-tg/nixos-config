@@ -1,7 +1,12 @@
-{ ... }:
+{ pkgs, ... }:
 
 {
   networking.networkmanager.enable = true;
+
+  environment.systemPackages = with pkgs; [
+    networkmanagerapplet
+    openvpn
+  ];
 
   services.avahi = {
     enable = true;
@@ -16,5 +21,4 @@
     allowPing = false;
   };
 
-  services.openssh.enable = false;
 }
