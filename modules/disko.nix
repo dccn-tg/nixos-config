@@ -1,10 +1,7 @@
 # modules/disko.nix
 
-{ config, ... }:
+{ config, host, ... }:
 
-let
-  host = config.host;
-in
 {
   disko.devices = {
     disk.main = {
