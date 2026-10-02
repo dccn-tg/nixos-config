@@ -1,6 +1,6 @@
 # modules/disko.nix
 
-{ config, host, ... }:
+{ host, ... }:
 
 {
   disko.devices = {

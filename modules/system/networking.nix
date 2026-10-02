@@ -1,12 +1,9 @@
-{ pkgs, config, ... }:
+{ pkgs, host, ... }:
 
-let
-  cfg = config.host;
-in
 {
   networking.networkmanager.enable = true;
 
-  networking.hostName = cfg.name;
+  networking.hostName = host.name;
 
   environment.systemPackages = with pkgs; [
     networkmanagerapplet
