@@ -33,6 +33,22 @@
     boot.loader.efi.canTouchEfiVariables = true;
     boot.kernelPackages = pkgs.linuxPackages_latest;
 
+    # graphical boot splash, including the LUKS passphrase prompt
+    boot.plymouth = {
+      enable = true;
+      theme = "spinner";
+    };
+    # Plymouth asks for the LUKS passphrase reliably only with the systemd initrd.
+    boot.initrd.systemd.enable = true;
+    boot.initrd.verbose = false;
+    boot.consoleLogLevel = 3;
+    boot.kernelParams = [
+      "quiet"
+      "splash"
+      "udev.log_level=3"
+      "rd.systemd.show_status=auto"
+    ];
+
     # networking
     networking.hostName = host.name;
     networking.networkmanager.enable = true;
