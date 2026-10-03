@@ -159,8 +159,8 @@ ok "Password set for nixadmin"
 # Copy repository to /mnt/home/nixadmin/nixos-config
 # ---------------------------------------------------------------------------
 
-mkdir -p /mnt/etc/nixos/nixos-config &&
-    cp -R "$REPO_DIR" /mnt/etc/nixos/nixos-config
+mkdir -p /mnt/etc/nixos &&
+    cp -R "$REPO_DIR" /mnt/etc/nixos
 
 # ---------------------------------------------------------------------------
 # Done
