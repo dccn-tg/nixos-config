@@ -89,33 +89,17 @@ read -rp "Type YES in uppercase to continue: " CONFIRM
 [[ "$CONFIRM" == "YES" ]] || { echo "Aborted."; exit 0; }
 
 # ---------------------------------------------------------------------------
-# Generate hardware configuration
+# Generate hardware configuration and copy it into the repo
 # ---------------------------------------------------------------------------
 
 info "Generating hardware configuration"
 nixos-generate-config --root /mnt
 ok "Hardware configuration written to /mnt/etc/nixos/"
 
-# ---------------------------------------------------------------------------
-# Clone this repository
-# ---------------------------------------------------------------------------
-if [ "$REPO_DIR" == "" ]; then
-    REPO_DIR="/mnt/etc/nixos/nixos-config"
-    info "Cloning nixos-config into $REPO_DIR"
-    git clone "$REPO_URL" "$REPO_DIR"
-    ok "Repository cloned"
-fi
-
-# ---------------------------------------------------------------------------
-# Copy generated hardware configuration into the repo
-# ---------------------------------------------------------------------------
-info "Checking host specific configuration"
 REPO_DIR_HOST="$REPO_DIR/hosts/${HOSTNAME}"
-if [ ! -d "$REPO_DIR_HOST" ]; then
-    mkdir -p "$REPO_DIR_HOST"
-fi
-
 info "Copying hardware configuration to $REPO_DIR_HOST/hardware.nix"
+mkdir -p "$REPO_DIR_HOST"
+
 cp /mnt/etc/nixos/hardware-configuration.nix "$REPO_DIR_HOST/hardware.nix"
 git add "$REPO_DIR_HOST/hardware.nix"
 ok "Hardware config copied"
@@ -175,8 +159,8 @@ ok "Password set for nixadmin"
 # Copy repository to /mnt/home/nixadmin/nixos-config
 # ---------------------------------------------------------------------------
 
-cp -R "$REPO_DIR" /mnt/home/nixadmin/nixos-config &&
-    chown -R nixadmin:nixadmin /mnt/home/nixadmin/nixos-config
+mkdir -p /mnt/etc/nixos/nixos-config &&
+    cp -R "$REPO_DIR" /mnt/etc/nixos/nixos-config
 
 # ---------------------------------------------------------------------------
 # Done
