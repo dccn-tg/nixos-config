@@ -12,7 +12,23 @@
       "flakes"
     ];
 
+    # garbage collection
+    nix.gc = {
+      automatic = true;
+      dates = "weekly";
+      randomizedDelaySec = "45min";
+      persistent = true;
+      options = "--delete-older-than 14d";
+    };
+    nix.optimise = {
+      automatic = true;
+      dates = [ "03:45" ];
+    };
+    nix.settings.min-free = 1024 * 1024 * 1024;
+    nix.settings.max-free = 5 * 1024 * 1024 * 1024;
+
     # boot
+    boot.loader.systemd-boot.configurationLimit = 5;
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
     boot.kernelPackages = pkgs.linuxPackages_latest;
