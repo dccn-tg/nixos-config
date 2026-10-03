@@ -1,27 +1,4 @@
 #!/usr/bin/env bash
-# install.sh — Unattended NixOS installation from this flake.
-#
-# Usage:
-#   sudo bash scripts/install.sh <hostname> <disk-device>
-#
-# Examples:
-#   sudo bash scripts/install.sh vm001 /dev/vda
-#   sudo bash scripts/install.sh dccnlpt001 /dev/nvme0n1
-#
-# The script follows every step documented in README.md:
-#   1.  Validate inputs
-#   2.  Prompt for LUKS passphrase and nixadmin password (once, at the start)
-#   3.  Confirm before wiping the disk
-#   4.  Partition the disk (GPT: 512 MB ESP + rest as root)
-#   5.  Set up LUKS encryption on the root partition
-#   6.  Format partitions (FAT32 ESP, XFS root labelled "nixos")
-#   7.  Mount filesystems
-#   8.  Generate hardware configuration
-#   9.  Clone this repository into /mnt/etc/nixos/nixos-config
-#   10. Copy the generated hardware config into the repo
-#   11. Install NixOS (no root password)
-#   12. Set the nixadmin user password
-#   13. Print reboot notice
 
 set -euo pipefail
 
@@ -36,28 +13,57 @@ die()   { printf '\n\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 swapGB=$(awk '/MemTotal/ {printf "%d", $2*1.2/1024/1024}' /proc/meminfo)
 
 # ---------------------------------------------------------------------------
-# 1. Input validation
+# Input validation
 # ---------------------------------------------------------------------------
 
 [[ $EUID -eq 0 ]] || die "This script must be run as root (use sudo)."
 
+usage() {
+    cat >&2 <<USAGE
+Usage: $0 [options] <hostname> <hardware> <disk-device>
+
+  hardware      hardware profile: vm | laptop
+
+Options:
+  -d <desktop>  desktop environment: gnome | kde | sway   (default: gnome)
+  -r <role>     role: norm | geek                         (default: norm)
+  -s <size>     root partition size in GB                 (default: 10)
+  -n            enable the NVIDIA GPU mixin
+  -h            show this help
+USAGE
+    exit 1
+}
+
+DESKTOP="gnome"
+ROLE="norm"
+NVIDIA="false"
+ROOT_GB="10"
+
+while getopts ":d:r:s:nh" opt; do
+    case "$opt" in
+        d) DESKTOP="$OPTARG" ;;
+        r) ROLE="$OPTARG" ;;
+        s) ROOT_GB="$OPTARG" ;;
+        n) NVIDIA="true" ;;
+        h) usage ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) die "Unknown option -$OPTARG. Use -h for help." ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 HOSTNAME="${1:-}"
-DISK="${2:-}"
+HARDWARE="${2:-}"
+DISK="${3:-}"
 
-[[ -n "$HOSTNAME" ]] || die "Usage: $0 <hostname> <disk-device>"
-[[ -n "$DISK"     ]] || die "Usage: $0 <hostname> <disk-device>"
-[[ -b "$DISK"     ]] || die "Disk device '$DISK' not found or is not a block device."
+[[ -n "$HOSTNAME" && -n "$HARDWARE" && -n "$DISK" ]] || usage
+[[ "$ROOT_GB" =~ ^[1-9][0-9]*$ ]] || die "Root size must be a positive integer (GB)."
+[[ -b "$DISK" ]] || die "Disk device '$DISK' not found or is not a block device."
 
-# Derive partition names — handle both /dev/sdX and /dev/nvmeXnY style devices.
-if [[ "$DISK" =~ nvme|loop|mmcblk ]]; then
-    PART_ESP="${DISK}p1"
-    PART_ROOT="${DISK}p2"
-    PART_SWAP="${DISK}p3"
-else
-    PART_ESP="${DISK}1"
-    PART_ROOT="${DISK}2"
-    PART_SWAP="${DISK}3"
-fi
+diskGB=$(( $(blockdev --getsize64 "$DISK") / 1024 / 1024 / 1024 ))
+requiredGB=$(( ROOT_GB + swapGB ))
+maxGB=$(( diskGB - 10 )) # reserve 10 GB for other partitions (boot and home)
+(( requiredGB <= maxGB )) || die "Root (${ROOT_GB} GB) + swap (${swapGB} GB) = ${requiredGB} GB exceeds the allowed ${maxGB} GB (disk ${diskGB} GB minus 10 GB reserve)."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -65,15 +71,10 @@ REPO_URL="https://github.com/dccn-tg/nixos-config"
 REPO_DIR=$(cd "$SCRIPT_DIR/.." && git rev-parse --show-toplevel || "")
 
 # ---------------------------------------------------------------------------
-# 2. Collect secrets up front (nothing is written to disk or echoed)
+# Collect secrets up front (nothing is written to disk or echoed)
 # ---------------------------------------------------------------------------
 
 info "Collecting secrets"
-
-read -rsp "  Enter LUKS passphrase: " LUKS_PASS; echo
-read -rsp "  Confirm LUKS passphrase: " LUKS_PASS2; echo
-[[ "$LUKS_PASS" == "$LUKS_PASS2" ]] || die "LUKS passphrases do not match."
-[[ ${#LUKS_PASS} -ge 8 ]] || die "LUKS passphrase must be at least 8 characters."
 
 read -rsp "  Enter password for user 'nixadmin': " USER_PASS; echo
 read -rsp "  Confirm password for user 'nixadmin': " USER_PASS2; echo
@@ -81,130 +82,81 @@ read -rsp "  Confirm password for user 'nixadmin': " USER_PASS2; echo
 [[ ${#USER_PASS} -ge 6 ]] || die "User password must be at least 6 characters."
 
 # ---------------------------------------------------------------------------
-# 3. Confirmation prompt
+# Confirmation prompt
 # ---------------------------------------------------------------------------
 
 printf '\n'
 printf '\033[1;33mWARNING:\033[0m All data on %s will be permanently destroyed.\n' "$DISK"
-printf '         Hostname : %s\n' "$HOSTNAME"
-printf '         Disk     : %s\n' "$DISK"
-printf '         ESP      : %s\n' "$PART_ESP"
-printf '         Root     : %s  (LUKS → /dev/mapper/cryptroot → XFS "nixos")\n' "$PART_ROOT"
-printf '         Swap     : %s  (%d GB)\n' "$PART_SWAP" "$swapGB"
+printf '         hostname : %s\n' "$HOSTNAME"
+printf '         disk     : %s (%d GB)\n' "$DISK" "$diskGB"
+printf '           - root : %d GB\n' "$ROOT_GB"
+printf '           - swap : %d GB\n' "$swapGB"
+printf '         hardware : %s (nvidia: %s)\n' "$HARDWARE" "$NVIDIA"
+printf '         desktop  : %s\n' "$DESKTOP"
+printf '         role     : %s\n' "$ROLE"
 printf '\n'
 read -rp "Type YES in uppercase to continue: " CONFIRM
 [[ "$CONFIRM" == "YES" ]] || { echo "Aborted."; exit 0; }
 
 # ---------------------------------------------------------------------------
-# 4. Partition the disk
-# ---------------------------------------------------------------------------
-
-info "Partitioning $DISK"
-parted -s "$DISK" -- mklabel gpt
-parted -s "$DISK" -- mkpart ESP fat32 1MB 512MB
-parted -s "$DISK" -- set 1 esp on
-parted -s "$DISK" -- mkpart primary 512MB -${swapGB}GB
-parted -s "$DISK" -- mkpart swap linux-swap -${swapGB}GB 100%
-ok "Partitions created"
-
-# Give the kernel a moment to register the new partition table.
-sleep 1
-partprobe "$DISK" 2>/dev/null || true
-
-# ---------------------------------------------------------------------------
-# 5. Set up LUKS encryption
-# ---------------------------------------------------------------------------
-
-info "Setting up LUKS on $PART_ROOT"
-printf '%s' "$LUKS_PASS" | cryptsetup luksFormat \
-    --batch-mode \
-    --key-file=- \
-    "$PART_ROOT"
-
-printf '%s' "$LUKS_PASS" | cryptsetup open \
-    --key-file=- \
-    "$PART_ROOT" cryptroot
-
-ok "LUKS container opened at /dev/mapper/cryptroot"
-
-# Passphrase is no longer needed; overwrite the variable.
-LUKS_PASS="$(head -c 64 /dev/urandom | base64)"
-LUKS_PASS2="$LUKS_PASS"
-
-# ---------------------------------------------------------------------------
-# 6. Format partitions
-# ---------------------------------------------------------------------------
-
-info "Formatting partitions"
-mkfs.fat -F 32 -n boot "$PART_ESP"
-mkfs.xfs -L nixos /dev/mapper/cryptroot
-ok "FAT32 ESP and XFS root formatted"
-
-mkswap -L swap "$PART_SWAP"
-swapon "$PART_SWAP"
-ok "Swap partition enabled"
-
-# ---------------------------------------------------------------------------
-# 7. Mount filesystems (wait for udev to settle)
-# ---------------------------------------------------------------------------
-
-udevadm settle
-
-info "Mounting filesystems"
-mount /dev/disk/by-label/nixos /mnt
-mkdir -p /mnt/boot
-mount "$PART_ESP" /mnt/boot
-ok "Filesystems mounted at /mnt"
-
-# ---------------------------------------------------------------------------
-# 8. Generate hardware configuration
+# Generate hardware configuration and copy it into the repo
 # ---------------------------------------------------------------------------
 
 info "Generating hardware configuration"
 nixos-generate-config --root /mnt
 ok "Hardware configuration written to /mnt/etc/nixos/"
 
-# ---------------------------------------------------------------------------
-# 9. Clone this repository
-# ---------------------------------------------------------------------------
-if [ "$REPO_DIR" == "" ]; then
-    REPO_DIR="/mnt/etc/nixos/nixos-config"
-    info "Cloning nixos-config into $REPO_DIR"
-    git clone "$REPO_URL" "$REPO_DIR"
-    ok "Repository cloned"
-fi
+REPO_DIR_HOST="$REPO_DIR/hosts/${HOSTNAME}"
+info "Copying hardware configuration to $REPO_DIR_HOST/hardware.nix"
+mkdir -p "$REPO_DIR_HOST"
 
-# ---------------------------------------------------------------------------
-# 10. Copy generated hardware configuration into the repo
-# ---------------------------------------------------------------------------
-
-info "Checking host specific configuration"
-if [ ! -f "$REPO_DIR/hosts/${HOSTNAME}.nix" ]; then
-    sed s/@@HOSTNAME@@/${HOSTNAME}/g "$REPO_DIR/hosts/host.template" > "$REPO_DIR/hosts/${HOSTNAME}.nix"
-    git add "$REPO_DIR/hosts/${HOSTNAME}.nix" 
-fi
-
-info "Copying hardware configuration to $REPO_DIR/hardware/generated/${HOSTNAME}.nix"
-cp /mnt/etc/nixos/hardware-configuration.nix \
-   "$REPO_DIR/hardware/generated/${HOSTNAME}.nix"
-git add "$REPO_DIR/hardware/generated/${HOSTNAME}.nix"
+cp /mnt/etc/nixos/hardware-configuration.nix "$REPO_DIR_HOST/hardware.nix"
+git add "$REPO_DIR_HOST/hardware.nix"
 ok "Hardware config copied"
 
+info "Creating host-specfic installation arguments in $REPO_DIR_HOST/install-args.nix"
+cat > "$REPO_DIR_HOST/install-args.nix" <<EOF
+{
+  # Hostname of the machine
+  name = "${HOSTNAME}";
+  # Hardware profile (modules/hardware.nix: hw-<hardware>)
+  hardware = "${HARDWARE}";
+  # Enable the NVIDIA GPU mixin (hw-nvidia)
+  nvidia = ${NVIDIA};
+  # Desktop environment (modules/desktops.nix: desktop-<desktop>)
+  desktop = "${DESKTOP}";
+  # Role of the machine (modules/roles.nix: role-<role>)
+  role = "${ROLE}";
+  # Disk device to use for the OS filesystem
+  diskDevice = "${DISK}";
+  # Size of the root partition
+  rootSize = "${ROOT_GB}G";
+  # Size of the swap partition
+  swapSize = "${swapGB}G";
+}
+EOF
+
+git add "$REPO_DIR_HOST/install-args.nix"
+ok "Installation arguments written"
+
 # ---------------------------------------------------------------------------
-# 11. Install NixOS
+# Install NixOS
 # ---------------------------------------------------------------------------
+
+info "Creating disk partitions"
+nix-shell -p disko --run "disko --mode disko --flake \"${REPO_DIR}#${HOSTNAME}\""
 
 info "Running nixos-install (this may take a while)"
 nixos-install --no-root-passwd --flake "${REPO_DIR}#${HOSTNAME}"
 ok "NixOS installation complete"
 
 # ---------------------------------------------------------------------------
-# 12. Set nixadmin password
+# Set nixadmin password
 # ---------------------------------------------------------------------------
 
 info "Setting password for user 'nixadmin'"
 nixos-enter --root /mnt -c \
-    "printf '%s\n%s\n' '${USER_PASS}' '${USER_PASS}' | passwd nixadmin"
+    "printf '%s\n%s\n' '${USER_PASS}' '${USER_PASS2}' | passwd nixadmin"
 
 # Overwrite the password variable now that it has been used.
 USER_PASS="$(head -c 64 /dev/urandom | base64)"
@@ -213,7 +165,14 @@ USER_PASS2="$USER_PASS"
 ok "Password set for nixadmin"
 
 # ---------------------------------------------------------------------------
-# 13. Done
+# Copy repository to /mnt/home/nixadmin/nixos-config
+# ---------------------------------------------------------------------------
+
+mkdir -p /mnt/etc/nixos &&
+    cp -R "$REPO_DIR" /mnt/etc/nixos
+
+# ---------------------------------------------------------------------------
+# Done
 # ---------------------------------------------------------------------------
 
 printf '\n'

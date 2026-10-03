@@ -1,44 +1,20 @@
 {
-  description = "Hong's NixOS configuration";
+  description = "My NixOS systems";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
-    lanzaboote = {
-      url = "github:nix-community/lanzaboote/v1.1.0";
+
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
+
+    import-tree.url = "github:vic/import-tree";
+
+    disko = {
+      url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, lanzaboote, ... }:
-
-  let
-    system = "x86_64-linux";
-
-    mkHost = hostFile:
-      nixpkgs.lib.nixosSystem {
-        inherit system;
-
-        modules = [
-          lanzaboote.nixosModules.lanzaboote
-          hostFile
-        ];
-      };
-
-    hostFiles = builtins.readDir ./hosts;
-
-    hostNames = builtins.attrNames (
-      nixpkgs.lib.filterAttrs
-        (name: type: type == "regular" && builtins.match ".*\\.nix" name != null)
-        hostFiles
-    );
-
-  in {
-    nixosConfigurations =
-      builtins.listToAttrs (
-        map (file: {
-          name = builtins.replaceStrings [ ".nix" ] [ "" ] file;
-          value = mkHost (./hosts + "/${file}");
-        }) hostNames
-      );
-  };
+  outputs = inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }
