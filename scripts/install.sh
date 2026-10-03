@@ -18,15 +18,43 @@ swapGB=$(awk '/MemTotal/ {printf "%d", $2*1.2/1024/1024}' /proc/meminfo)
 
 [[ $EUID -eq 0 ]] || die "This script must be run as root (use sudo)."
 
-# FIXME: use getopts to parse arguments & usage message
+usage() {
+    cat >&2 <<USAGE
+Usage: $0 [options] <hostname> <hardware> <disk-device>
+
+  hardware      hardware profile: vm | laptop
+
+Options:
+  -d <desktop>  desktop environment: gnome | kde | sway   (default: gnome)
+  -r <role>     role: norm | geek                         (default: norm)
+  -n            enable the NVIDIA GPU mixin
+  -h            show this help
+USAGE
+    exit 1
+}
+
+DESKTOP="gnome"
+ROLE="norm"
+NVIDIA="false"
+
+while getopts ":d:r:nh" opt; do
+    case "$opt" in
+        d) DESKTOP="$OPTARG" ;;
+        r) ROLE="$OPTARG" ;;
+        n) NVIDIA="true" ;;
+        h) usage ;;
+        :) die "Option -$OPTARG requires an argument." ;;
+        *) die "Unknown option -$OPTARG. Use -h for help." ;;
+    esac
+done
+shift $((OPTIND - 1))
+
 HOSTNAME="${1:-}"
-PROFILE="${2:-}"
+HARDWARE="${2:-}"
 DISK="${3:-}"
 
-[[ -n "$HOSTNAME" ]] || die "Usage: $0 <hostname> <profile> <disk-device>"
-[[ -n "$PROFILE"  ]] || die "Usage: $0 <hostname> <profile> <disk-device>"
-[[ -n "$DISK"     ]] || die "Usage: $0 <hostname> <profile> <disk-device>"
-[[ -b "$DISK"     ]] || die "Disk device '$DISK' not found or is not a block device."
+[[ -n "$HOSTNAME" && -n "$HARDWARE" && -n "$DISK" ]] || usage
+[[ -b "$DISK" ]] || die "Disk device '$DISK' not found or is not a block device."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -52,6 +80,9 @@ printf '\n'
 printf '\033[1;33mWARNING:\033[0m All data on %s will be permanently destroyed.\n' "$DISK"
 printf '         Hostname : %s\n' "$HOSTNAME"
 printf '         Disk     : %s\n' "$DISK"
+printf '         Hardware : %s (nvidia: %s)\n' "$HARDWARE" "$NVIDIA"
+printf '         Desktop  : %s\n' "$DESKTOP"
+printf '         Role     : %s\n' "$ROLE"
 printf '         Swap     : %d GB\n' "$swapGB"
 printf '\n'
 read -rp "Type YES in uppercase to continue: " CONFIRM
@@ -94,8 +125,14 @@ cat > "$REPO_DIR_HOST/install-args.nix" <<EOF
 {
   # Hostname of the machine
   name = "${HOSTNAME}";
-  # NixOS configuration profile to use for installation
-  profile = "${PROFILE}";
+  # Hardware profile (modules/hardware.nix: hw-<hardware>)
+  hardware = "${HARDWARE}";
+  # Enable the NVIDIA GPU mixin (hw-nvidia)
+  nvidia = ${NVIDIA};
+  # Desktop environment (modules/desktops.nix: desktop-<desktop>)
+  desktop = "${DESKTOP}";
+  # Role of the machine (modules/roles.nix: role-<role>)
+  role = "${ROLE}";
   # Disk device to use for the OS filesystem
   diskDevice = "${DISK}";
   # Size of the root partition
@@ -135,10 +172,11 @@ USER_PASS2="$USER_PASS"
 ok "Password set for nixadmin"
 
 # ---------------------------------------------------------------------------
-# Copy repository to /mnt/etc/nixos/nixos-config
+# Copy repository to /mnt/home/nixadmin/nixos-config
 # ---------------------------------------------------------------------------
 
-cp -R "$REPO_DIR" /mnt/etc/nixos/nixos-config
+cp -R "$REPO_DIR" /mnt/home/nixadmin/nixos-config &&
+    chown -R nixadmin:nixadmin /mnt/home/nixadmin/nixos-config
 
 # ---------------------------------------------------------------------------
 # Done

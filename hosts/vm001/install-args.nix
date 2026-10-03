@@ -1,6 +1,9 @@
 {
   name = "vm001";
-  profile = "vm";
+  hardware = "vm";
+  nvidia = false;
+  desktop = "gnome";
+  role = "norm";
 
   diskDevice = "/dev/vda";
   rootSize = "10G";
