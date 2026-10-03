@@ -1,6 +1,6 @@
 # Builds one nixosConfiguration per directory in hosts/ that has an install-args.nix.
 #
-# A host is: base + storage + <hardware> + <desktop> + <role> [+ nvidia mixin],
+# A host is: base + storage + <hardware> + <desktop> + <role> [+ nvidia mixin] [+ secureboot],
 # selected by hosts/<name>/install-args.nix.
 { inputs, self, lib, ... }:
 
@@ -15,6 +15,7 @@ let
     let
       host = {
         nvidia = false;
+        secureboot = false;
         desktop = "gnome";
         role = "norm";
       } // import (hostsDir + "/${name}/install-args.nix");
@@ -34,7 +35,11 @@ let
         nixosModules."desktop-${host.desktop}"
         nixosModules."role-${host.role}"
         (hostsDir + "/${name}/hardware.nix")
-      ] ++ lib.optional host.nvidia nixosModules.hw-nvidia;
+      ] ++ lib.optional host.nvidia nixosModules.hw-nvidia
+        ++ lib.optionals host.secureboot [
+          inputs.lanzaboote.nixosModules.lanzaboote
+          nixosModules.secureboot
+        ];
     };
 in
 {
