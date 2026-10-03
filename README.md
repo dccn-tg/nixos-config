@@ -64,7 +64,8 @@ still considered unstable, so it is off by default. To enable it on a host:
 2. create the signing keys: `sudo nix run nixpkgs#sbctl -- create-keys` (stored in `/var/lib/sbctl`)
 3. rebuild and switch, then check with `sudo sbctl verify`
 4. put the firmware in Setup Mode and run `sudo sbctl enroll-keys --microsoft`
-5. reboot and enable Secure Boot in the firmware
+   __note:__ you may need to add `--ignore-immutable` option in case the command gives _File is immutable_ error.
+6. reboot and enable Secure Boot in the firmware
 
 Set the flag back to `false` and rebuild to return to systemd-boot.
 
