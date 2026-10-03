@@ -56,6 +56,8 @@
     environment.systemPackages = with pkgs; [
       networkmanagerapplet
       openvpn
+      eduvpn-client
+      geteduroam
 
       git
       vim
