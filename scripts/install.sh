@@ -27,6 +27,7 @@ Usage: $0 [options] <hostname> <hardware> <disk-device>
 Options:
   -d <desktop>  desktop environment: gnome | kde | sway   (default: gnome)
   -r <role>     role: norm | geek                         (default: norm)
+  -s <size>     root partition size in GB                 (default: 10)
   -n            enable the NVIDIA GPU mixin
   -h            show this help
 USAGE
@@ -36,11 +37,13 @@ USAGE
 DESKTOP="gnome"
 ROLE="norm"
 NVIDIA="false"
+ROOT_GB="10"
 
-while getopts ":d:r:nh" opt; do
+while getopts ":d:r:s:nh" opt; do
     case "$opt" in
         d) DESKTOP="$OPTARG" ;;
         r) ROLE="$OPTARG" ;;
+        s) ROOT_GB="$OPTARG" ;;
         n) NVIDIA="true" ;;
         h) usage ;;
         :) die "Option -$OPTARG requires an argument." ;;
@@ -54,7 +57,13 @@ HARDWARE="${2:-}"
 DISK="${3:-}"
 
 [[ -n "$HOSTNAME" && -n "$HARDWARE" && -n "$DISK" ]] || usage
+[[ "$ROOT_GB" =~ ^[1-9][0-9]*$ ]] || die "Root size must be a positive integer (GB)."
 [[ -b "$DISK" ]] || die "Disk device '$DISK' not found or is not a block device."
+
+diskGB=$(( $(blockdev --getsize64 "$DISK") / 1024 / 1024 / 1024 ))
+requiredGB=$(( ROOT_GB + swapGB ))
+maxGB=$(( diskGB - 10 )) # reserve 10 GB for other partitions (boot and home)
+(( requiredGB <= maxGB )) || die "Root (${ROOT_GB} GB) + swap (${swapGB} GB) = ${requiredGB} GB exceeds the allowed ${maxGB} GB (disk ${diskGB} GB minus 10 GB reserve)."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -78,12 +87,13 @@ read -rsp "  Confirm password for user 'nixadmin': " USER_PASS2; echo
 
 printf '\n'
 printf '\033[1;33mWARNING:\033[0m All data on %s will be permanently destroyed.\n' "$DISK"
-printf '         Hostname : %s\n' "$HOSTNAME"
-printf '         Disk     : %s\n' "$DISK"
-printf '         Hardware : %s (nvidia: %s)\n' "$HARDWARE" "$NVIDIA"
-printf '         Desktop  : %s\n' "$DESKTOP"
-printf '         Role     : %s\n' "$ROLE"
-printf '         Swap     : %d GB\n' "$swapGB"
+printf '         hostname : %s\n' "$HOSTNAME"
+printf '         disk     : %s (%d GB)\n' "$DISK" "$diskGB"
+printf '           - root : %d GB\n' "$ROOT_GB"
+printf '           - swap : %d GB\n' "$swapGB"
+printf '         hardware : %s (nvidia: %s)\n' "$HARDWARE" "$NVIDIA"
+printf '         desktop  : %s\n' "$DESKTOP"
+printf '         role     : %s\n' "$ROLE"
 printf '\n'
 read -rp "Type YES in uppercase to continue: " CONFIRM
 [[ "$CONFIRM" == "YES" ]] || { echo "Aborted."; exit 0; }
@@ -120,8 +130,7 @@ cat > "$REPO_DIR_HOST/install-args.nix" <<EOF
   # Disk device to use for the OS filesystem
   diskDevice = "${DISK}";
   # Size of the root partition
-  # FIXME: should be determined dynamically based on disk size and swap size
-  rootSize = "10G";
+  rootSize = "${ROOT_GB}G";
   # Size of the swap partition
   swapSize = "${swapGB}G";
 }
