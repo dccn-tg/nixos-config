@@ -63,7 +63,7 @@
           lock-enabled = true;
           lock-delay = lib.gvariant.mkUint32 0;
         };
-        "org/gnome/desktop/session".idle-delay = lib.gvariant.mkUint32 900;
+        "org/gnome/desktop/session".idle-delay = lib.gvariant.mkUint32 1200;
       };
       locks = [ "/org/gnome/desktop/screensaver/lock-enabled" ];
     }];
@@ -75,7 +75,7 @@
       Autolock[$i]=true
       LockOnResume[$i]=true
       LockGrace=0
-      Timeout=15
+      Timeout=20
     '';
   };
 
