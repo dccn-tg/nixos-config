@@ -1,6 +1,6 @@
 # Builds one nixosConfiguration per class: <model>-<desktop>-<role>[-sb].
 #
-# A class is: base + storage + hw-<model> + desktop-<desktop> + role-<role> + auto-update [+ secureboot for the -sb variant].
+# A class is: base + storage + hw-<model> + desktop-<desktop> + role-<role> + auto-update + hardening + hardening-<desktop> [+ secureboot for the -sb variant].
 # Nothing is machine specific; the hostname comes from /etc/hostname (see scripts/install.sh).
 { inputs, self, lib, ... }:
 
@@ -30,6 +30,8 @@ let
         nixosModules."desktop-${desktop}"
         nixosModules."role-${role}"
         nixosModules.auto-update
+        nixosModules.hardening
+        nixosModules."hardening-${desktop}"
       ] ++ lib.optionals secureboot [
         inputs.lanzaboote.nixosModules.lanzaboote
         nixosModules.secureboot
