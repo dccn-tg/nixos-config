@@ -52,6 +52,12 @@
 
     environment.systemPackages = [ pkgs.gnome-software ];
 
+    # Keep Log Out available in the system menu; locked so users cannot hide it.
+    programs.dconf.profiles.user.databases = [{
+      settings."org/gnome/desktop/lockdown".disable-log-out = false;
+      locks = [ "/org/gnome/desktop/lockdown/disable-log-out" ];
+    }];
+
     # Mail client with Exchange (EWS) support.
     programs.evolution = {
       enable = true;
