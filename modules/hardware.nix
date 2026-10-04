@@ -4,14 +4,19 @@ let
   hw = inputs.nixos-hardware.nixosModules;
 in
 {
-  # A system-wide daemon that talks to the hypervisor over a virtio serial port for
-  # clipboard sharing, automatic resolution adjustment, file transfer and seamless
-  # mouse integration (QEMU/KVM, VirtualBox, VMware).
-  flake.modules.nixos.hw-vm = {
+  flake.modules.nixos.hw-vm = { modulesPath, ... }: {
+    # virtio drivers in the initrd, needed to find the disk and unlock LUKS at boot.
+    imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
+
+    # A system-wide daemon that talks to the hypervisor over a virtio serial port for
+    # clipboard sharing, automatic resolution adjustment, file transfer and seamless
+    # mouse integration (QEMU/KVM, VirtualBox, VMware).
     services.spice-vdagentd.enable = true;
   };
 
-  flake.modules.nixos.hw-laptop = { pkgs, lib, ... }: {
+  flake.modules.nixos.hw-laptop = { pkgs, lib, modulesPath, ... }: {
+    imports = [ (modulesPath + "/profiles/all-hardware.nix") ];
+
     hardware.enableRedistributableFirmware = true;
     services.fstrim.enable = true;
 
