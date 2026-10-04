@@ -31,6 +31,8 @@ in
     services.upower.enable = true;
     services.logind.settings.Login.HandleLidSwitch = "suspend";
 
+    services.fwupd.enable = true;
+
     environment.systemPackages = with pkgs; [
       acpi
       lm_sensors
@@ -54,8 +56,6 @@ in
       hw.common-cpu-intel
       hw.common-gpu-nvidia-disable
     ];
-
-    services.fwupd.enable = true;
 
     boot.initrd.availableKernelModules = [ "xhci_pci" "thunderbolt" "vmd" "nvme" "usb_storage" "sd_mod" ];
     boot.kernelModules = [ "kvm-intel" ];
