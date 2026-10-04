@@ -12,8 +12,11 @@
 
     environment.systemPackages = with pkgs;[ 
       vscode
+      fastfetch
     ];
     local.allowedUnfree = [ "vscode" ];
+
+    programs.zsh.interactiveShellInit = "fastfetch";
 
     # virtualization tools
     virtualisation.libvirtd.enable = true;
