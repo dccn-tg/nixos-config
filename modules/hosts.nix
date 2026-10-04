@@ -1,51 +1,50 @@
-# Builds one nixosConfiguration per directory in hosts/ that has an install-args.nix.
+# Builds one nixosConfiguration per class: <model>-<desktop>-<role>[-sb].
 #
-# A host is: base + storage + <hardware> + <desktop> + <role> [+ nvidia mixin] [+ secureboot],
-# selected by hosts/<name>/install-args.nix.
+# A class is: base + storage + hw-<model> + desktop-<desktop> + role-<role> + auto-update [+ secureboot for the -sb variant].
+# Nothing is machine specific; the hostname comes from /etc/hostname (see scripts/install.sh).
 { inputs, self, lib, ... }:
 
 let
-  hostsDir = ../hosts;
+  models = {
+    vm = { diskDevice = "/dev/vda"; rootSize = "10G"; swapSize = "4G"; };
+    latitude5491 = { diskDevice = "/dev/sda"; rootSize = "100G"; swapSize = "8G"; };
+    precision5560 = { diskDevice = "/dev/nvme0n1"; rootSize = "100G"; swapSize = "16G"; };
+  };
+  desktops = [ "gnome" "kde" "sway" ];
+  roles = [ "norm" "geek" ];
 
-  hostNames = lib.attrNames (lib.filterAttrs
-    (name: type: type == "directory" && builtins.pathExists (hostsDir + "/${name}/install-args.nix"))
-    (builtins.readDir hostsDir));
-
-  mkHost = name:
+  mkClass = { model, desktop, role, secureboot }:
     let
-      host = {
-        nvidia = false;
-        secureboot = false;
-        desktop = "gnome";
-        role = "norm";
-      } // import (hostsDir + "/${name}/install-args.nix");
-
+      class = "${model}-${desktop}-${role}${lib.optionalString secureboot "-sb"}";
+      host = models.${model} // { inherit class model desktop role secureboot; };
       nixosModules = self.modules.nixos;
     in
-    inputs.nixpkgs.lib.nixosSystem {
+    lib.nameValuePair class (inputs.nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-
       specialArgs = { inherit host; };
-
       modules = [
         inputs.disko.nixosModules.disko
         nixosModules.base
         nixosModules.storage
-        nixosModules."hw-${host.hardware}"
-        nixosModules."desktop-${host.desktop}"
-        nixosModules."role-${host.role}"
-        (hostsDir + "/${name}/hardware.nix")
-      ] ++ lib.optional host.nvidia nixosModules.hw-nvidia
-        ++ lib.optionals host.secureboot [
-          inputs.lanzaboote.nixosModules.lanzaboote
-          nixosModules.secureboot
-        ];
-    };
+        nixosModules."hw-${model}"
+        nixosModules."desktop-${desktop}"
+        nixosModules."role-${role}"
+        nixosModules.auto-update
+      ] ++ lib.optionals secureboot [
+        inputs.lanzaboote.nixosModules.lanzaboote
+        nixosModules.secureboot
+      ];
+    });
 in
 {
   imports = [ inputs.flake-parts.flakeModules.modules ];
 
   systems = [ "x86_64-linux" ];
 
-  flake.nixosConfigurations = lib.genAttrs hostNames mkHost;
+  flake.nixosConfigurations = lib.listToAttrs (map mkClass (lib.cartesianProduct {
+    model = lib.attrNames models;
+    desktop = desktops;
+    role = roles;
+    secureboot = [ false true ];
+  }));
 }

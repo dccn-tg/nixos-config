@@ -1,4 +1,10 @@
-# Disk layout: GPT, ESP + LUKS -> LVM (root, swap, home), sized from install-args.nix.
+# Disk layout: GPT, ESP + LUKS -> LVM (root, swap, home), sized from the host class (hosts.nix).
+let
+  # The installer overrides sizes through the environment (needs --impure). Comin
+  # evaluates purely and sees the class defaults; sizes do not affect the running system.
+  envOr = name: default:
+    let v = builtins.getEnv name; in if v == "" then default else v;
+in
 {
   flake.modules.nixos.storage = { host, ... }: {
     disko.devices = {
@@ -46,7 +52,7 @@
 
         lvs = {
           root = {
-            size = host.rootSize;
+            size = envOr "ROOT_SIZE" host.rootSize;
             content = {
               type = "filesystem";
               format = "xfs";
@@ -57,7 +63,7 @@
           };
 
           swap = {
-            size = host.swapSize;
+            size = envOr "SWAP_SIZE" host.swapSize;
             content.type = "swap";
           };
 
