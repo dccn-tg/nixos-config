@@ -17,6 +17,9 @@
     services.flatpak.enable = true;
 
     environment.systemPackages = with pkgs; [
+      firefox
+      eduvpn-client
+      geteduroam
       thunderbird
       libreoffice
       drawio

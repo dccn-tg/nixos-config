@@ -3,10 +3,6 @@
 
 {
   flake.modules.nixos.role-norm = { pkgs, ... }: {
-    environment.systemPackages = with pkgs; [
-      firefox
-    ];
-
     programs.appimage.enable = true;
     programs.appimage.binfmt = true;
   };
