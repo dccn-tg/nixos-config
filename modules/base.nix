@@ -1,6 +1,6 @@
 # Applied to every host.
 {
-  flake.modules.nixos.base = { pkgs, host, ... }: {
+  flake.modules.nixos.base = { pkgs, ... }: {
     system.stateVersion = "26.05";
 
     time.timeZone = "Europe/Amsterdam";
@@ -50,7 +50,8 @@
     ];
 
     # networking
-    networking.hostName = host.name;
+    # Hostname is machine state: scripts/install.sh writes /etc/hostname.
+    networking.hostName = "";
     networking.networkmanager.enable = true;
 
     services.avahi = {
