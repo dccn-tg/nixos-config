@@ -11,8 +11,11 @@
     programs.appimage.binfmt = true;
   };
 
-  flake.modules.nixos.role-geek = {
+  flake.modules.nixos.role-geek = { pkgs, ... }: {
     imports = [ self.modules.nixos.role-norm ];
+
+    environment.systemPackages = [ pkgs.vscode ];
+    local.allowedUnfree = [ "vscode" ];
 
     # virtualization tools
     virtualisation.libvirtd.enable = true;

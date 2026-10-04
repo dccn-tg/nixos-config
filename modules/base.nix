@@ -1,6 +1,18 @@
 # Applied to every host.
 {
   flake.modules.nixos.base = { pkgs, ... }: {
+    imports = [
+      ({ lib, config, ... }: {
+        # Modules append the unfree packages they need; merged into one predicate.
+        options.local.allowedUnfree = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+        };
+        config.nixpkgs.config.allowUnfreePredicate = pkg:
+          builtins.elem (lib.getName pkg) config.local.allowedUnfree;
+      })
+    ];
+
     system.stateVersion = "26.05";
 
     time.timeZone = "Europe/Amsterdam";

@@ -63,12 +63,11 @@ in
 
   flake.modules.nixos.hw-nvidia = { lib, ... }: {
     services.xserver.videoDrivers = [ "nvidia" ];
-    nixpkgs.config.allowUnfreePredicate = pkg:
-      builtins.elem (lib.getName pkg) [
-        "nvidia-x11"
-        "nvidia-settings"
-        "nvidia-persistenced"
-      ];
+    local.allowedUnfree = [
+      "nvidia-x11"
+      "nvidia-settings"
+      "nvidia-persistenced"
+    ];
 
     # Open kernel modules need Turing or newer; set to false for older GPUs.
     hardware.nvidia.open = lib.mkDefault true;
