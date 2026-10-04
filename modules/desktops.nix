@@ -42,6 +42,38 @@
         RestartSec = 30;
       };
     };
+
+    # Remind the user to reboot after an update changed kernel, initrd or modules
+    # (flag set by the Comin post-deployment command, see auto-update.nix).
+    systemd.user.services.reboot-reminder = {
+      description = "Remind the user to reboot after a system update";
+      wantedBy = [ "default.target" ];
+      path = [ pkgs.libnotify pkgs.systemd ];
+      unitConfig.ConditionPathExists = "/run/reboot-required";
+      serviceConfig = {
+        Type = "oneshot";
+        # Shorter than the timer interval so a pending notification cannot block the next one.
+        TimeoutStartSec = "4min";
+        ExecStart = pkgs.writeShellScript "reboot-reminder" ''
+          action=$(notify-send --urgency=critical --app-name="System update" \
+            --action=reboot="Reboot now" --action=later="Later" --wait \
+            "Reboot required" "A system update needs a reboot to take effect.")
+          [ "$action" = reboot ] && systemctl reboot
+          exit 0
+        '';
+      };
+    };
+
+    systemd.user.paths.reboot-reminder = {
+      wantedBy = [ "default.target" ];
+      pathConfig.PathChanged = "/run/reboot-required";
+    };
+
+    # Repeat interval is 5 minutes for testing; use e.g. "0/4:00" (every 4 hours) in production.
+    systemd.user.timers.reboot-reminder = {
+      wantedBy = [ "timers.target" ];
+      timerConfig.OnCalendar = "*:0/5";
+    };
   };
 
   flake.modules.nixos.desktop-gnome = { pkgs, lib, ... }: {
