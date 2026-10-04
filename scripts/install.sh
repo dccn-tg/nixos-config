@@ -18,6 +18,9 @@ swapGB=$(awk '/MemTotal/ {printf "%d", $2*1.2/1024/1024}' /proc/meminfo)
 
 [[ $EUID -eq 0 ]] || die "This script must be run as root (use sudo)."
 
+# The installer ISO does not enable these by default.
+export NIX_CONFIG="experimental-features = nix-command flakes"
+
 usage() {
     cat >&2 <<USAGE
 Usage: $0 [options] <hostname> <model>
@@ -62,10 +65,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 REPO_DIR=$(cd "$SCRIPT_DIR/.." && git rev-parse --show-toplevel)
 
-nix eval "${REPO_DIR}#nixosConfigurations.\"${CLASS}\".config.system.build.toplevel.drvPath" >/dev/null 2>&1 \
+nix eval "${REPO_DIR}#nixosConfigurations.${CLASS}.config.system.build.toplevel.drvPath" >/dev/null \
     || die "Unknown class '${CLASS}'. Check the model, desktop and role."
 
-DISK=$(nix eval --raw "${REPO_DIR}#nixosConfigurations.\"${CLASS}\".config.disko.devices.disk.main.device")
+DISK=$(nix eval --raw "${REPO_DIR}#nixosConfigurations.${CLASS}.config.disko.devices.disk.main.device")
 [[ -b "$DISK" ]] || die "Disk device '$DISK' (from class ${CLASS}) not found or is not a block device."
 
 diskGB=$(( $(blockdev --getsize64 "$DISK") / 1024 / 1024 / 1024 ))
