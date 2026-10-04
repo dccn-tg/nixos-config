@@ -16,20 +16,20 @@
 
     services.flatpak.enable = true;
 
-    # Add the Flathub remote to each user's installation on first login.
+    # Ensure the Flathub remote exists in each user's installation at login.
+    # Retries because the user manager cannot wait for the system network target.
     systemd.user.services.flatpak-add-flathub = {
       description = "Add Flathub flatpak remote for the user";
       wantedBy = [ "default.target" ];
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      unitConfig.ConditionPathExists = "!%h/.local/share/flatpak/.flathub-added";
+      unitConfig = {
+        StartLimitIntervalSec = "10min";
+        StartLimitBurst = 5;
+      };
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = pkgs.writeShellScript "flatpak-add-flathub" ''
-          ${pkgs.flatpak}/bin/flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          mkdir -p "$HOME/.local/share/flatpak"
-          touch "$HOME/.local/share/flatpak/.flathub-added"
-        '';
+        ExecStart = "${pkgs.flatpak}/bin/flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo";
+        Restart = "on-failure";
+        RestartSec = 30;
       };
     };
   };
