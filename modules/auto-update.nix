@@ -15,7 +15,7 @@
         name = "origin";
         url = "https://github.com/dccn-tg/nixos-config";
         branches.main.name = "main";
-        poller.period = 1800;
+        poller.period = 300;
       }];
     };
   };
