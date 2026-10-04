@@ -103,10 +103,17 @@
 
     environment.systemPackages = [ pkgs.gnome-software ];
 
-    # Keep Log Out available in the system menu; locked so users cannot hide it.
+    # GNOME hides Log Out for a single local user with one session type;
+    # always-show-log-out overrides that. Locked so users cannot hide it again.
     programs.dconf.profiles.user.databases = [{
-      settings."org/gnome/desktop/lockdown".disable-log-out = false;
-      locks = [ "/org/gnome/desktop/lockdown/disable-log-out" ];
+      settings = {
+        "org/gnome/shell".always-show-log-out = true;
+        "org/gnome/desktop/lockdown".disable-log-out = false;
+      };
+      locks = [
+        "/org/gnome/shell/always-show-log-out"
+        "/org/gnome/desktop/lockdown/disable-log-out"
+      ];
     }];
 
     # Mail client with Exchange (EWS) support.
