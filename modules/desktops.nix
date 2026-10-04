@@ -69,6 +69,25 @@
       pathConfig.PathChanged = "/run/reboot-required";
     };
 
+    # Informational notice for updates that do not need a reboot (written by the Comin
+    # post-deployment command, see auto-update.nix).
+    systemd.user.services.update-notice = {
+      description = "Notify the user that the system was updated";
+      path = [ pkgs.libnotify pkgs.coreutils ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "update-notice" ''
+          notify-send --urgency=normal --app-name="System update" \
+            "System updated" "$(cat /run/update-applied)"
+        '';
+      };
+    };
+
+    systemd.user.paths.update-notice = {
+      wantedBy = [ "default.target" ];
+      pathConfig.PathChanged = "/run/update-applied";
+    };
+
     # Repeat interval is 5 minutes for testing; use e.g. "0/4:00" (every 4 hours) in production.
     systemd.user.timers.reboot-reminder = {
       wantedBy = [ "timers.target" ];
