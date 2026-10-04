@@ -65,6 +65,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 REPO_DIR=$(cd "$SCRIPT_DIR/.." && git rev-parse --show-toplevel)
 
+info "Checking class availability and disk requirements"
 nix eval "${REPO_DIR}#nixosConfigurations.${CLASS}.config.system.build.toplevel.drvPath" >/dev/null \
     || die "Unknown class '${CLASS}'. Check the model, desktop and role."
 
