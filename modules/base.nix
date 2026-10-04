@@ -108,6 +108,7 @@
       curl
       htop
       jq
+      file
 
       usbutils
       pciutils
