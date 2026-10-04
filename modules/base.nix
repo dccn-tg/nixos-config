@@ -107,6 +107,7 @@
       wget
       curl
       htop
+      jq
 
       usbutils
       pciutils

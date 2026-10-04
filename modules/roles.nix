@@ -10,7 +10,10 @@
   flake.modules.nixos.role-geek = { pkgs, ... }: {
     imports = [ self.modules.nixos.role-norm ];
 
-    environment.systemPackages = [ pkgs.vscode ];
+    environment.systemPackages = with pkgs;[ 
+      vscode
+      alacritty
+    ];
     local.allowedUnfree = [ "vscode" ];
 
     # virtualization tools
