@@ -12,7 +12,6 @@
 
     environment.systemPackages = with pkgs;[ 
       vscode
-      alacritty
     ];
     local.allowedUnfree = [ "vscode" ];
 
