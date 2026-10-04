@@ -7,6 +7,8 @@
 
     services.comin = {
       enable = true;
+      desktop.enable = true;
+      desktop.title = "System update";
       # The flake output is the class; the real hostname lives in /etc/hostname.
       hostname = host.class;
       remotes = [{
