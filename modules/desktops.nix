@@ -16,6 +16,13 @@
 
     services.flatpak.enable = true;
 
+    environment.systemPackages = with pkgs; [
+      thunderbird
+      libreoffice
+      drawio
+      nextcloud-client
+    ];
+
     # Ensure the Flathub remote exists in each user's installation at login.
     # Retries because the user manager cannot wait for the system network target.
     systemd.user.services.flatpak-add-flathub = {
@@ -42,6 +49,12 @@
 
     environment.systemPackages = [ pkgs.gnome-software ];
 
+    # Mail client with Exchange (EWS) support.
+    programs.evolution = {
+      enable = true;
+      plugins = [ pkgs.evolution-ews ];
+    };
+
     xdg.portal.enable = true;
     xdg.portal.extraPortals = lib.mkAfter [
       pkgs.xdg-desktop-portal-gnome
@@ -57,9 +70,9 @@
     };
     services.desktopManager.plasma6.enable = true;
 
-    environment.systemPackages = with pkgs.kdePackages; [
-      discover
-      flatpak-kcm
+    environment.systemPackages = [
+      pkgs.kdePackages.discover
+      pkgs.kdePackages.flatpak-kcm
     ];
   };
 
@@ -68,6 +81,12 @@
 
     programs.sway.enable = true;
     services.displayManager.gdm.enable = true;
+
+    # Mail client with Exchange (EWS) support.
+    programs.evolution = {
+      enable = true;
+      plugins = [ pkgs.evolution-ews ];
+    };
 
     xdg.portal.extraPortals = lib.mkAfter [
       pkgs.xdg-desktop-portal-wlr
